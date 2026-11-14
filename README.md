@@ -1,38 +1,34 @@
 # Floresta em Pé — Joinville/SC
 
-Protótipo educativo de registro de ocorrências ambientais em Joinville, Santa Catarina.
+Site educativo de denúncias ambientais, projetado para **Chromebook e Chrome**, sem Node.js, instalação de bibliotecas, servidor ou internet.
 
-## Executar
+## Como executar
 
-1. Instale o **Node.js 18 ou superior**.
-2. No terminal, dentro da pasta do projeto, execute `npm start` (ou `node server.js`).
-3. Abra **http://localhost:3000** no navegador.
+1. Baixe os arquivos do projeto e mantenha `index.html`, `style.css`, `script.js` e `logo.png` na mesma pasta.
+2. Abra `index.html` no Chrome (pode ser pelo app Arquivos do Chromebook).
+3. Acesse **Denunciar** para registrar uma ocorrência.
 
-**Não abra o `index.html` diretamente como arquivo:** o salvamento agora depende do servidor Node. Nenhuma dependência npm precisa ser instalada.
+## Dados: como não perder as ocorrências
 
-## Funcionalidades
+- Os novos registros ficam automaticamente no **localStorage** do Chrome, sob a chave `floresta-ocorrencias`. Isso mantém os dados após fechar a página, mas **não sincroniza navegadores/dispositivos** e **não equivale a um backup em arquivo**.
+- Na aba **Ocorrências**, clique **Salvar JSON** para escolher onde criar `ocorrencias.json` (se o Chrome permitir `showSaveFilePicker`). Se essa funcionalidade não estiver disponível, o navegador baixa o JSON: mova-o para a pasta do projeto no app Arquivos.
+- Use **Salvar JSON** novamente depois das alterações para atualizar o arquivo escolhido enquanto a página estiver aberta; após reabrir a página, pode ser necessário escolher o arquivo de novo.
+- Use **Baixar cópia JSON** como backup independente.
+- Use **Importar JSON antigo** para adicionar os registros de um arquivo anterior sem duplicar protocolos. Registros históricos de outras cidades são preservados, mas **novos cadastros** só permitem Joinville/SC.
+- Se mudar o local do HTML, a origem do site ou o navegador, o `localStorage` pode não acompanhar. **Faça backup antes**.
+- O site não lê nem altera automaticamente o arquivo JSON sem a escolha/permissão do usuário; isso é uma restrição de segurança do navegador.
+- Não use modo anônimo nem limpe os dados do site se quiser manter os registros.
 
-- Cadastro de denúncias apenas de **Joinville/SC**, validado no formulário **e no servidor**.
-- Campo obrigatório de **endereço** e campo opcional de ponto de referência.
-- Mapa interativo com **Leaflet + OpenStreetMap**: clique para informar coordenadas aproximadas. Não precisa de chave Google Maps. Requer internet para carregar os arquivos de mapa.
-- Armazenamento no arquivo **`data/ocorrencias.json`**, gerado automaticamente ao iniciar o servidor. Dados permanecem após reiniciar o processo.
-- Consulta, exportação JSON e exclusão por protocolo ou de toda a lista.
-- Migração automática de dados antigos do `localStorage`: no primeiro acesso **pelo mesmo navegador e origem em que os dados foram salvos**, envia o histórico ao servidor e conserva a cópia original como backup. Se mudar de origem/porta, baixe o JSON pela versão anterior do site e use **Importar JSON antigo** na página de ocorrências da nova versão. A migração não remove denúncias históricas de outras cidades.
+## Formulário e mapa
 
-## API local
+- Município e estado fixos: **Joinville / SC**.
+- Endereço obrigatório, ponto de referência opcional.
+- O mapa é uma **ilustração esquemática offline**, feita com CSS, sem OpenStreetMap/Leaflet/Google Maps.
+- Ao clicar nele, gera coordenadas **ilustrativas**; elas **não correspondem a uma localização geográfica real ou ao endereço digitado**. Não as utilize para fiscalização ou navegação.
+- O formulário não encaminha ocorrências a órgãos ambientais.
 
-| Método | Rota | Descrição |
-| --- | --- | --- |
-| GET | `/api/ocorrencias` | Lista ocorrências |
-| POST | `/api/ocorrencias` | Cadastra uma ocorrência |
-| POST | `/api/importar` | Migra até 100 registros antigos por lote, evitando protocolos duplicados |
-| DELETE | `/api/ocorrencias/:id` | Exclui uma ocorrência |
-| DELETE | `/api/ocorrencias` | Exclui todas |
+## Limitações e privacidade
 
-O arquivo JSON **não é publicado pelo servidor web** e está no `.gitignore` para evitar envio acidental ao GitHub. Os registros são gravados no computador onde o processo Node roda, **não no GitHub nem no computador de cada visitante**.
+Este projeto é um protótipo escolar, **não um sistema oficial de denúncias**. Dados podem ser perdidos se o armazenamento do navegador for limpo. Quem tiver acesso ao perfil local do Chrome poderá consultar os registros. Evite registrar informações pessoais sensíveis.
 
-## Limitações importantes
-
-Este é um **protótipo escolar para uso local e confiável**, sem autenticação, controle de acesso, criptografia de dados em repouso ou verificação geográfica real. **Não disponibilize este servidor na internet** e não insira informações pessoais sensíveis. O mapa aceita coordenadas dentro de uma caixa aproximada ao redor de Joinville, não valida os limites municipais nem se o endereço corresponde ao ponto marcado. O envio do formulário **não encaminha denúncias aos órgãos ambientais**. Para denúncias oficiais, consulte o Ibama e os órgãos ambientais competentes.
-
-Dados antigos existentes apenas no navegador não podem ser acessados automaticamente a partir de outro navegador, dispositivo ou origem.
+A URL `tile.openstreetmap.org` foi removida porque o serviço impõe regras de identificação e pode bloquear requisições, em especial de páginas abertas localmente. O site não faz mais requisições a servidores de mapas.
