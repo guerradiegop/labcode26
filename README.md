@@ -17,7 +17,7 @@ Protótipo educativo de registro de ocorrências ambientais em Joinville, Santa 
 - Mapa interativo com **Leaflet + OpenStreetMap**: clique para informar coordenadas aproximadas. Não precisa de chave Google Maps. Requer internet para carregar os arquivos de mapa.
 - Armazenamento no arquivo **`data/ocorrencias.json`**, gerado automaticamente ao iniciar o servidor. Dados permanecem após reiniciar o processo.
 - Consulta, exportação JSON e exclusão por protocolo ou de toda a lista.
-- Migração automática de dados antigos do `localStorage`: no primeiro acesso **pelo mesmo navegador e origem em que os dados foram salvos**, envia o histórico ao servidor e conserva a cópia original como backup. Se mudar de origem/porta, exporte o JSON antigo ou execute a versão anterior para recuperá-lo. A migração não remove denúncias históricas de outras cidades.
+- Migração automática de dados antigos do `localStorage`: no primeiro acesso **pelo mesmo navegador e origem em que os dados foram salvos**, envia o histórico ao servidor e conserva a cópia original como backup. Se mudar de origem/porta, baixe o JSON pela versão anterior do site e use **Importar JSON antigo** na página de ocorrências da nova versão. A migração não remove denúncias históricas de outras cidades.
 
 ## API local
 
