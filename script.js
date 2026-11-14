@@ -18,9 +18,9 @@
       var antigos = [];
       try { antigos = JSON.parse(localStorage.getItem(CHAVE) || "[]"); } catch (e) {}
       if (Array.isArray(antigos) && antigos.length && localStorage.getItem(CHAVE + "-migrado") !== "1") {
-        for (var i = 0; i < antigos.length; i += 100) {
+        for (var i = 0; i < antigos.length; i += 20) {
           await requisitar("/api/importar", { method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(antigos.slice(i, i + 100)) });
+            body: JSON.stringify(antigos.slice(i, i + 20)) });
         }
         // Conserva o backup original; marca somente após resposta de todos os lotes.
         localStorage.setItem(CHAVE + "-migrado", "1");
@@ -270,9 +270,9 @@
       var lista = JSON.parse(await arq.text());
       if (!Array.isArray(lista)) throw new Error("O JSON deve conter uma lista de ocorrências.");
       var total = 0;
-      for (var i = 0; i < lista.length; i += 100) {
+      for (var i = 0; i < lista.length; i += 20) {
         var resp = await requisitar("/api/importar", { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(lista.slice(i, i + 100)) });
+          body: JSON.stringify(lista.slice(i, i + 20)) });
         total += resp.importadas;
       }
       alert(total + " ocorrência(s) importada(s). Registros duplicados não foram importados.");
