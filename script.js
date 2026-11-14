@@ -31,7 +31,7 @@
       var lista = dadosLocais();
       var token = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + "-" + String(Math.random()).slice(2);
       var reg = { id: token, protocolo: "DES-" + new Date().getFullYear() + "-" + token.replace(/-/g, "").slice(0, 10).toUpperCase(),
-        tipo: d.tipo, cidade: "Joinville", uf: "SC", endereco: d.endereco, local: d.local, lat: d.lat, lng: d.lng,
+        tipo: d.tipo, cidade: "Joinville", uf: "SC", endereco: d.endereco, local: d.local,
         data: d.data, desc: d.desc, anonima: d.anonima, contato: d.anonima ? "" : d.contato,
         criada: new Date().toISOString(), status: "Registrada" };
       lista.unshift(reg); gravarLocal(lista); return reg;
@@ -137,33 +137,6 @@
     return y + "-" + m + "-" + dia;
   }
   $("data").max = hojeLocal();
-  /* Mapa esquemático, não cartográfico, disponível offline */
-  var mapa = $("mapa");
-  mapa.setAttribute("role", "button");
-  mapa.setAttribute("tabindex", "0");
-  mapa.setAttribute("aria-label", "Mapa esquemático de Joinville. Clique para marcar uma posição aproximada.");
-  mapa.innerHTML = '<span class="mapa-titulo">Joinville / SC</span><span class="mapa-area mapa-norte">Norte</span><span class="mapa-area mapa-centro">Centro</span><span class="mapa-area mapa-sul">Sul</span><span class="mapa-area mapa-leste">Leste</span><span class="mapa-rua rua-a"></span><span class="mapa-rua rua-b"></span><span class="mapa-rua rua-c"></span><span class="mapa-ponto" id="mapa-ponto" hidden>●</span><span class="mapa-aviso">Ilustração aproximada, não representa ruas ou limites reais.</span>';
-  var ponto = $("mapa-ponto");
-  function posicaoRelativa(x, y) {
-    x = Math.max(0, Math.min(1, x)); y = Math.max(0, Math.min(1, y));
-    // Aproximação apenas para referência; NÃO é geolocalização cartográfica.
-    var lat = -26.15 - y * 0.30, lng = -49.04 + x * 0.38;
-    $("lat").value = lat.toFixed(6);
-    $("lng").value = lng.toFixed(6);
-    ponto.hidden = false;
-    ponto.style.left = (x * 100) + "%";
-    ponto.style.top = (y * 100) + "%";
-  }
-  mapa.addEventListener("click", function (e) {
-    var rect = mapa.getBoundingClientRect();
-    posicaoRelativa((e.clientX - rect.left) / rect.width, (e.clientY - rect.top) / rect.height);
-  });
-  mapa.addEventListener("keydown", function (e) {
-    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); posicaoRelativa(.5, .5); }
-  });
-  $("remover-ponto").addEventListener("click", function () {
-    $("lat").value = $("lng").value = ""; ponto.hidden = true;
-  });
   $("anon").addEventListener("change", function () {
     $("contato").hidden = $("anon").checked;
     if ($("anon").checked) $("nome").value = "";
@@ -187,7 +160,6 @@
   $("form").addEventListener("submit", async function (e) {
     e.preventDefault();
     var d = { tipo: $("tipo").value, cidade: "Joinville", uf: "SC", endereco: $("endereco").value.trim(), local: $("local").value.trim(),
-              lat: $("lat").value ? Number($("lat").value) : null, lng: $("lng").value ? Number($("lng").value) : null,
               data: $("data").value, desc: $("desc").value.trim(), anonima: $("anon").checked, contato: $("nome").value.trim() };
     var ruim = false;
     function chk(cond, campo, msg) { erro(campo, cond ? "" : msg); if (!cond) ruim = true; }
@@ -204,7 +176,6 @@
       var reg = await Banco.adicionar(d);
       aviso("Denúncia registrada", "Seu protocolo é " + reg.protocolo + ". Os dados foram salvos neste navegador. Para manter uma cópia na pasta do projeto, use Salvar JSON na aba Ocorrências. Para fiscalização oficial, envie também ao Ibama (0800 061 8080).", false, true);
       $("form").reset(); $("contato").hidden = true;
-      $("remover-ponto").click();
     } catch (e) {
       aviso("Não foi possível registrar", e.message + " Verifique o espaço e as permissões de armazenamento do Chrome.", true, false);
     } finally { $("enviar").disabled = false; }
