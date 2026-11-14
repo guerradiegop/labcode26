@@ -262,6 +262,24 @@
   $("baixar").addEventListener("click", async function () {
     try { await Banco.baixarJSON(); } catch (e) { alert("Erro ao baixar: " + e.message); }
   });
+  $("importar").addEventListener("change", async function () {
+    var arq = this.files && this.files[0];
+    if (!arq) return;
+    try {
+      if (arq.size > 2 * 1024 * 1024) throw new Error("Arquivo maior que 2 MB.");
+      var lista = JSON.parse(await arq.text());
+      if (!Array.isArray(lista)) throw new Error("O JSON deve conter uma lista de ocorrências.");
+      var total = 0;
+      for (var i = 0; i < lista.length; i += 100) {
+        var resp = await requisitar("/api/importar", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(lista.slice(i, i + 100)) });
+        total += resp.importadas;
+      }
+      alert(total + " ocorrência(s) importada(s). Registros duplicados não foram importados.");
+      await carregar();
+    } catch (e) { alert("Erro na importação: " + e.message); }
+    finally { this.value = ""; }
+  });
   $("limpar").addEventListener("click", async function () {
     if (!confirm("Apagar TODAS as ocorrências do arquivo JSON no servidor? Esta ação é irreversível.")) return;
     try { await Banco.limpar(); await carregar(); }
