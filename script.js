@@ -17,13 +17,13 @@
       // Importação idempotente: só remove a cópia local após confirmação do servidor.
       var antigos = [];
       try { antigos = JSON.parse(localStorage.getItem(CHAVE) || "[]"); } catch (e) {}
-      if (Array.isArray(antigos) && antigos.length) {
+      if (Array.isArray(antigos) && antigos.length && localStorage.getItem(CHAVE + "-migrado") !== "1") {
         for (var i = 0; i < antigos.length; i += 100) {
           await requisitar("/api/importar", { method: "POST", headers: { "Content-Type": "application/json" },
             body: JSON.stringify(antigos.slice(i, i + 100)) });
         }
-        // Mantemos backup no navegador para não perder dados antigos.
-        // O servidor ignora protocolos que já foram importados.
+        // Conserva o backup original; marca somente após resposta de todos os lotes.
+        localStorage.setItem(CHAVE + "-migrado", "1");
       }
       return requisitar("/api/ocorrencias");
     },
