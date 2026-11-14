@@ -5,39 +5,56 @@
   var CHAVE = "floresta-ocorrencias";
   var memoria = [];
 
-  /* ---------- API local e migração sem apagar registros antigos ---------- */
-  async function requisitar(url, opts) {
-    var r = await fetch(url, opts || {});
-    var j = await r.json();
-    if (!r.ok) throw new Error(j.erro || "Falha na comunicação com o servidor.");
-    return j;
+  /* Banco local: persistência no navegador; exportação e importação JSON */
+  var arquivoHandle = null;
+  function dadosLocais() {
+    var json = localStorage.getItem(CHAVE);
+    if (!json) return [];
+    var lista = JSON.parse(json);
+    if (!Array.isArray(lista)) throw new Error("Armazenamento local inválido");
+    return lista;
+  }
+  function gravarLocal(lista) {
+    // Não apresenta confirmação caso o navegador bloqueie ou esgote armazenamento.
+    localStorage.setItem(CHAVE, JSON.stringify(lista));
+  }
+  function baixarLista(lista) {
+    var blob = new Blob([JSON.stringify(lista, null, 2)], { type: "application/json" });
+    var link = document.createElement("a"), url = URL.createObjectURL(blob);
+    link.href = url; link.download = "ocorrencias.json";
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
   var Banco = {
-    listar: async function () {
-      // Importação idempotente: só remove a cópia local após confirmação do servidor.
-      var antigos = [];
-      try { antigos = JSON.parse(localStorage.getItem(CHAVE) || "[]"); } catch (e) {}
-      if (Array.isArray(antigos) && antigos.length && localStorage.getItem(CHAVE + "-migrado") !== "1") {
-        for (var i = 0; i < antigos.length; i += 20) {
-          await requisitar("/api/importar", { method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(antigos.slice(i, i + 20)) });
-        }
-        // Conserva o backup original; marca somente após resposta de todos os lotes.
-        localStorage.setItem(CHAVE + "-migrado", "1");
-      }
-      return requisitar("/api/ocorrencias");
+    listar: function () { return dadosLocais(); },
+    adicionar: function (d) {
+      var lista = dadosLocais();
+      var token = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now()) + "-" + String(Math.random()).slice(2);
+      var reg = { id: token, protocolo: "DES-" + new Date().getFullYear() + "-" + token.replace(/-/g, "").slice(0, 10).toUpperCase(),
+        tipo: d.tipo, cidade: "Joinville", uf: "SC", endereco: d.endereco, local: d.local, lat: d.lat, lng: d.lng,
+        data: d.data, desc: d.desc, anonima: d.anonima, contato: d.anonima ? "" : d.contato,
+        criada: new Date().toISOString(), status: "Registrada" };
+      lista.unshift(reg); gravarLocal(lista); return reg;
     },
-    adicionar: function (d) { return requisitar("/api/ocorrencias", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d)
-    }); },
-    excluir: function (id) { return requisitar("/api/ocorrencias/" + encodeURIComponent(id), { method: "DELETE" }); },
-    limpar: function () { return requisitar("/api/ocorrencias", { method: "DELETE" }); },
-    baixarJSON: async function () {
-      var lista = await Banco.listar();
-      var blob = new Blob([JSON.stringify(lista, null, 2)], { type: "application/json" });
-      var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "ocorrencias.json";
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    excluir: function (id) { gravarLocal(dadosLocais().filter(function (r) { return r.id !== id && r.protocolo !== id; })); },
+    limpar: function () { gravarLocal([]); },
+    importar: function (entrada) {
+      if (!Array.isArray(entrada)) throw new Error("O JSON deve conter uma lista de ocorrências.");
+      if (entrada.length > 20000) throw new Error("Arquivo com registros demais.");
+      var atual = dadosLocais(), protocolos = new Set(atual.map(function (r) { return r.protocolo; })), quantidade = 0;
+      entrada.forEach(function (r) {
+        if (!r || typeof r !== "object" || Array.isArray(r) || typeof r.protocolo !== "string" || !r.protocolo.trim()) return;
+        if (protocolos.has(r.protocolo)) return;
+        atual.push(r); protocolos.add(r.protocolo); quantidade++;
+      });
+      if (quantidade) gravarLocal(atual);
+      return quantidade;
+    },
+    baixarJSON: function () { baixarLista(dadosLocais()); },
+    salvarArquivo: async function (handle) {
+      var fluxo = await handle.createWritable();
+      await fluxo.write(JSON.stringify(dadosLocais(), null, 2) + "\n");
+      await fluxo.close();
     }
   };
   var views = ["inicio", "denuncia", "ocorrencias"];
@@ -91,7 +108,6 @@
       if (a.dataset.nav === v) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });
     if (v === "ocorrencias") carregar();
-    if (v === "denuncia" && mapa) setTimeout(function () { mapa.invalidateSize(); }, 100);
     if (v !== "denuncia") $("confirm").hidden = true;
     observar();
   }
@@ -121,33 +137,32 @@
     return y + "-" + m + "-" + dia;
   }
   $("data").max = hojeLocal();
-  var mapa = null, marcador = null;
-  function posicao(lat, lng) {
-    $("lat").value = Number(lat).toFixed(6);
-    $("lng").value = Number(lng).toFixed(6);
-    if (mapa && window.L) {
-      if (marcador) mapa.removeLayer(marcador);
-      marcador = L.marker([lat, lng]).addTo(mapa);
-    }
+  /* Mapa esquemático, não cartográfico, disponível offline */
+  var mapa = $("mapa");
+  mapa.setAttribute("role", "button");
+  mapa.setAttribute("tabindex", "0");
+  mapa.setAttribute("aria-label", "Mapa esquemático de Joinville. Clique para marcar uma posição aproximada.");
+  mapa.innerHTML = '<span class="mapa-titulo">Joinville / SC</span><span class="mapa-area mapa-norte">Norte</span><span class="mapa-area mapa-centro">Centro</span><span class="mapa-area mapa-sul">Sul</span><span class="mapa-area mapa-leste">Leste</span><span class="mapa-rua rua-a"></span><span class="mapa-rua rua-b"></span><span class="mapa-rua rua-c"></span><span class="mapa-ponto" id="mapa-ponto" hidden>●</span><span class="mapa-aviso">Ilustração aproximada, não representa ruas ou limites reais.</span>';
+  var ponto = $("mapa-ponto");
+  function posicaoRelativa(x, y) {
+    x = Math.max(0, Math.min(1, x)); y = Math.max(0, Math.min(1, y));
+    // Aproximação apenas para referência; NÃO é geolocalização cartográfica.
+    var lat = -26.15 - y * 0.30, lng = -49.04 + x * 0.38;
+    $("lat").value = lat.toFixed(6);
+    $("lng").value = lng.toFixed(6);
+    ponto.hidden = false;
+    ponto.style.left = (x * 100) + "%";
+    ponto.style.top = (y * 100) + "%";
   }
-  if (window.L) {
-    mapa = L.map("mapa").setView([-26.3044, -48.8487], 12);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(mapa);
-    mapa.on("click", function (e) {
-      var lat = e.latlng.lat, lng = e.latlng.lng;
-      if (lat < -26.65 || lat > -25.9 || lng < -49.45 || lng > -48.55) {
-        alert("Selecione um ponto na região aproximada de Joinville."); return;
-      }
-      posicao(lat, lng);
-    });
-  } else {
-    $("mapa").textContent = "Mapa indisponível no momento. Informe o endereço para registrar a ocorrência.";
-  }
+  mapa.addEventListener("click", function (e) {
+    var rect = mapa.getBoundingClientRect();
+    posicaoRelativa((e.clientX - rect.left) / rect.width, (e.clientY - rect.top) / rect.height);
+  });
+  mapa.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); posicaoRelativa(.5, .5); }
+  });
   $("remover-ponto").addEventListener("click", function () {
-    $("lat").value = $("lng").value = "";
-    if (mapa && marcador) { mapa.removeLayer(marcador); marcador = null; }
+    $("lat").value = $("lng").value = ""; ponto.hidden = true;
   });
   $("anon").addEventListener("change", function () {
     $("contato").hidden = $("anon").checked;
@@ -187,11 +202,11 @@
     $("enviar").disabled = true;
     try {
       var reg = await Banco.adicionar(d);
-      aviso("Denúncia registrada", "Seu protocolo é " + reg.protocolo + ". Os dados foram gravados no JSON do servidor local. Para fiscalização oficial, envie também ao Ibama (0800 061 8080).", false, true);
+      aviso("Denúncia registrada", "Seu protocolo é " + reg.protocolo + ". Os dados foram salvos neste navegador. Para manter uma cópia na pasta do projeto, use Salvar JSON na aba Ocorrências. Para fiscalização oficial, envie também ao Ibama (0800 061 8080).", false, true);
       $("form").reset(); $("contato").hidden = true;
       $("remover-ponto").click();
     } catch (e) {
-      aviso("Não foi possível registrar", e.message + " Verifique se o servidor Node está em execução.", true, false);
+      aviso("Não foi possível registrar", e.message + " Verifique o espaço e as permissões de armazenamento do Chrome.", true, false);
     } finally { $("enviar").disabled = false; }
   });
 
@@ -259,31 +274,43 @@
     box.appendChild(t);
   }
   $("filtro").addEventListener("change", desenhar);
-  $("baixar").addEventListener("click", async function () {
-    try { await Banco.baixarJSON(); } catch (e) { alert("Erro ao baixar: " + e.message); }
+  $("baixar").addEventListener("click", function () {
+    try { Banco.baixarJSON(); } catch (e) { alert("Falha ao baixar JSON: " + e.message); }
+  });
+  $("salvar-json").addEventListener("click", async function () {
+    try {
+      if (window.showSaveFilePicker) {
+        // O seletor deve ser aberto diretamente no clique.
+        if (!arquivoHandle) arquivoHandle = await window.showSaveFilePicker({
+          suggestedName: "ocorrencias.json",
+          types: [{ description: "Dados JSON", accept: { "application/json": [".json"] } }]
+        });
+        await Banco.salvarArquivo(arquivoHandle);
+        alert("JSON salvo no arquivo escolhido. Use este botão para atualizar a mesma cópia.");
+      } else {
+        Banco.baixarJSON();
+        alert("O Chrome baixou ocorrencias.json. Mova o arquivo para a pasta do projeto no app Arquivos.");
+      }
+    } catch (e) {
+      if (e.name !== "AbortError") alert("Não foi possível salvar: " + e.message + ". Use Baixar JSON como alternativa.");
+    }
   });
   $("importar").addEventListener("change", async function () {
     var arq = this.files && this.files[0];
     if (!arq) return;
     try {
-      if (arq.size > 2 * 1024 * 1024) throw new Error("Arquivo maior que 2 MB.");
-      var lista = JSON.parse(await arq.text());
-      if (!Array.isArray(lista)) throw new Error("O JSON deve conter uma lista de ocorrências.");
-      var total = 0;
-      for (var i = 0; i < lista.length; i += 20) {
-        var resp = await requisitar("/api/importar", { method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(lista.slice(i, i + 20)) });
-        total += resp.importadas;
-      }
-      alert(total + " ocorrência(s) importada(s). Registros duplicados não foram importados.");
-      await carregar();
-    } catch (e) { alert("Erro na importação: " + e.message); }
+      if (arq.size > 5 * 1024 * 1024) throw new Error("Arquivo maior que 5 MB.");
+      var entrada = JSON.parse(await arq.text());
+      var total = Banco.importar(entrada);
+      alert(total + " ocorrência(s) importada(s). Duplicados preservados sem alteração.");
+      carregar();
+    } catch (e) { alert("Erro ao importar: " + e.message); }
     finally { this.value = ""; }
   });
-  $("limpar").addEventListener("click", async function () {
-    if (!confirm("Apagar TODAS as ocorrências do arquivo JSON no servidor? Esta ação é irreversível.")) return;
-    try { await Banco.limpar(); await carregar(); }
-    catch (e) { alert("Erro ao apagar: " + e.message); }
+  $("limpar").addEventListener("click", function () {
+    if (!confirm("Apagar todos os registros deste navegador? Salve antes uma cópia JSON. Esta ação é irreversível.")) return;
+    try { Banco.limpar(); carregar(); }
+    catch (e) { alert("Falha ao apagar: " + e.message); }
   });
 
   route();
