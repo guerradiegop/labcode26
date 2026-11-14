@@ -19,16 +19,14 @@ Site educativo de denúncias ambientais, projetado para **Chromebook e Chrome**,
 - O site não lê nem altera automaticamente o arquivo JSON sem a escolha/permissão do usuário; isso é uma restrição de segurança do navegador.
 - Não use modo anônimo nem limpe os dados do site se quiser manter os registros.
 
-## Formulário e mapa
+## Formulário
 
 - Município e estado fixos: **Joinville / SC**.
 - Endereço obrigatório, ponto de referência opcional.
-- O mapa é uma **ilustração esquemática offline**, feita com CSS, sem OpenStreetMap/Leaflet/Google Maps.
-- Ao clicar nele, gera coordenadas **ilustrativas**; elas **não correspondem a uma localização geográfica real ou ao endereço digitado**. Não as utilize para fiscalização ou navegação.
 - O formulário não encaminha ocorrências a órgãos ambientais.
 
 ## Limitações e privacidade
 
 Este projeto é um protótipo escolar, **não um sistema oficial de denúncias**. Dados podem ser perdidos se o armazenamento do navegador for limpo. Quem tiver acesso ao perfil local do Chrome poderá consultar os registros. Evite registrar informações pessoais sensíveis.
 
-A URL `tile.openstreetmap.org` foi removida porque o serviço impõe regras de identificação e pode bloquear requisições, em especial de páginas abertas localmente. O site não faz mais requisições a servidores de mapas.
+O site não utiliza mapas, coordenadas ou serviços de geolocalização.
