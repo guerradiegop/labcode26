@@ -645,3 +645,14 @@ footer p {
 .logo {
     width: 150px;
 }
+/* Seleção de localização em Joinville */
+.mapa {
+  height: 310px;
+  width: 100%;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  margin: .6rem 0 1rem;
+  z-index: 0;
+  background: var(--soft);
+}
+input[readonly] { opacity: .9; cursor: default; }
