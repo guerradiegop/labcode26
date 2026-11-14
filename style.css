@@ -645,3 +645,4 @@ footer p {
 .logo {
     width: 150px;
 }
+input[readonly] { opacity: .9; cursor: default; }

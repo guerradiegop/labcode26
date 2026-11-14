@@ -4,13 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Floresta em Pé – Desmatamento: entenda, evite e denuncie</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Public+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="top" id="topo">
   <div class="wrap">
-    <img class="logo" src="logo.png">
+    <img class="logo" src="logo.png" alt="Floresta em Pé">
     <a class="brand" href="#inicio">Floresta em Pé</a>
     <nav aria-label="Principal">
       <a href="#inicio" data-nav="inicio">Início</a>
@@ -118,9 +117,10 @@
                 <option>Outro</option>
               </select><p class="err" id="e-tipo"></p></div>
             <div class="row2">
-              <div class="f"><label for="cidade">Município *</label><input type="text" id="cidade" name="cidade" maxlength="80" autocomplete="off"><p class="err" id="e-cidade"></p></div>
-              <div class="f"><label for="uf">Estado *</label><select id="uf" name="uf"><option value="">UF</option></select><p class="err" id="e-uf"></p></div>
+              <div class="f"><label for="cidade">Município *</label><input type="text" id="cidade" name="cidade" value="Joinville" readonly><p class="err" id="e-cidade"></p></div>
+              <div class="f"><label for="uf">Estado *</label><input type="text" id="uf" name="uf" value="SC" readonly><p class="err" id="e-uf"></p></div>
             </div>
+            <div class="f"><label for="endereco">Endereço da ocorrência *</label><input type="text" id="endereco" name="endereco" maxlength="200" placeholder="Rua, número, bairro — Joinville/SC" required><p class="err" id="e-endereco"></p></div>
             <div class="f"><label for="local">Ponto de referência</label><input type="text" id="local" name="local" maxlength="120" placeholder="Estrada, fazenda, rio próximo..."></div>
             <div class="f"><label for="data">Data em que viu *</label><input type="date" id="data" name="data"><p class="err" id="e-data"></p></div>
             <div class="f"><label for="desc">O que você viu? *</label><textarea id="desc" name="desc" maxlength="1000" placeholder="Descreva: tamanho aproximado da área, máquinas, fogo, fumaça..."></textarea><p class="err" id="e-desc"></p></div>
@@ -139,14 +139,16 @@
   <section>
     <div class="wrap">
       <h2>Registro de ocorrências</h2>
-      <p>As denúncias ficam salvas neste navegador. Use o botão abaixo para baixar tudo em um arquivo <code>ocorrencias.json</code>.</p>
+      <p>As ocorrências são salvas neste navegador (localStorage), inclusive ao fechar a página. Para manter um arquivo <code>ocorrencias.json</code> na pasta do projeto, clique em <b>Salvar JSON</b> e escolha a pasta no Chrome. Em Chromebooks sem essa permissão, o arquivo será baixado. Importe um JSON anterior para recuperar dados de outros navegadores.</p>
       <div class="stats" id="stats"></div>
       <div class="tools">
         <label for="filtro">Filtrar por tipo</label>
         <select id="filtro"><option value="">Todos</option></select>
         <a class="btn small" href="#denuncia">Nova denúncia</a>
-        <button class="btn small alt" type="button" id="baixar">Baixar JSON</button>
-        <button class="btn small alt" type="button" id="limpar">Apagar todas</button>
+        <button class="btn small alt" type="button" id="salvar-json">Salvar JSON</button>
+        <button class="btn small alt" type="button" id="baixar">Baixar cópia JSON</button>
+        <label class="btn small alt import-btn" for="importar">Importar JSON antigo</label><input type="file" id="importar" accept=".json,application/json" aria-label="Importar arquivo JSON de ocorrências" hidden>
+        <button class="btn small alt" type="button" id="limpar">Apagar dados locais</button>
       </div>
       <div class="tablewrap" id="tabela"></div>
     </div>
