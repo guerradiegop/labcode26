@@ -5,30 +5,36 @@
   var CHAVE = "floresta-ocorrencias";
   var memoria = [];
 
-  /* ---------- "Back-end" em JavaScript: armazenamento no navegador ---------- */
+  /* ---------- API local e migração sem apagar registros antigos ---------- */
+  async function requisitar(url, opts) {
+    var r = await fetch(url, opts || {});
+    var j = await r.json();
+    if (!r.ok) throw new Error(j.erro || "Falha na comunicação com o servidor.");
+    return j;
+  }
   var Banco = {
-    listar: function () {
-      try { var r = localStorage.getItem(CHAVE); return r ? JSON.parse(r) : []; }
-      catch (e) { return memoria; }
+    listar: async function () {
+      // Importação idempotente: só remove a cópia local após confirmação do servidor.
+      var antigos = [];
+      try { antigos = JSON.parse(localStorage.getItem(CHAVE) || "[]"); } catch (e) {}
+      if (Array.isArray(antigos) && antigos.length) {
+        for (var i = 0; i < antigos.length; i += 100) {
+          await requisitar("/api/importar", { method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(antigos.slice(i, i + 100)) });
+        }
+        // Mantemos backup no navegador para não perder dados antigos.
+        // O servidor ignora protocolos que já foram importados.
+      }
+      return requisitar("/api/ocorrencias");
     },
-    gravar: function (lista) {
-      memoria = lista;
-      try { localStorage.setItem(CHAVE, JSON.stringify(lista)); } catch (e) {}
-    },
-    protocolo: function () {
-      var b = new Uint8Array(4); crypto.getRandomValues(b);
-      var c = Array.prototype.map.call(b, function (x) { return x.toString(36); }).join("").toUpperCase().slice(0, 5);
-      return "DES-" + new Date().getFullYear() + "-" + c;
-    },
-    adicionar: function (d) {
-      var reg = { protocolo: Banco.protocolo(), tipo: d.tipo, cidade: d.cidade, uf: d.uf, local: d.local, data: d.data,
-                  desc: d.desc, anonima: d.anonima, contato: d.anonima ? "" : d.contato,
-                  criada: new Date().toISOString(), status: "Registrada" };
-      var l = Banco.listar(); l.unshift(reg); Banco.gravar(l); return reg;
-    },
-    excluir: function (p) { Banco.gravar(Banco.listar().filter(function (r) { return r.protocolo !== p; })); },
-    baixarJSON: function () {
-      var blob = new Blob([JSON.stringify(Banco.listar(), null, 2)], { type: "application/json" });
+    adicionar: function (d) { return requisitar("/api/ocorrencias", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d)
+    }); },
+    excluir: function (id) { return requisitar("/api/ocorrencias/" + encodeURIComponent(id), { method: "DELETE" }); },
+    limpar: function () { return requisitar("/api/ocorrencias", { method: "DELETE" }); },
+    baixarJSON: async function () {
+      var lista = await Banco.listar();
+      var blob = new Blob([JSON.stringify(lista, null, 2)], { type: "application/json" });
       var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "ocorrencias.json";
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
@@ -85,6 +91,7 @@
       if (a.dataset.nav === v) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });
     if (v === "ocorrencias") carregar();
+    if (v === "denuncia" && mapa) setTimeout(function () { mapa.invalidateSize(); }, 100);
     if (v !== "denuncia") $("confirm").hidden = true;
     observar();
   }
@@ -105,14 +112,43 @@
   });
 
   /* ---------- Campos do formulário ---------- */
-  "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN RS RO RR SC SP SE TO".split(" ").forEach(function (u) {
-    var o = document.createElement("option"); o.value = o.textContent = u; $("uf").appendChild(o);
-  });
   Array.prototype.slice.call($("tipo").options, 1).forEach(function (o) {
     tipos.push(o.value);
     var f = document.createElement("option"); f.value = f.textContent = o.value; $("filtro").appendChild(f);
   });
-  $("data").max = new Date().toISOString().slice(0, 10);
+  function hojeLocal() {
+    var d = new Date(), y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), dia = String(d.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + dia;
+  }
+  $("data").max = hojeLocal();
+  var mapa = null, marcador = null;
+  function posicao(lat, lng) {
+    $("lat").value = Number(lat).toFixed(6);
+    $("lng").value = Number(lng).toFixed(6);
+    if (mapa && window.L) {
+      if (marcador) mapa.removeLayer(marcador);
+      marcador = L.marker([lat, lng]).addTo(mapa);
+    }
+  }
+  if (window.L) {
+    mapa = L.map("mapa").setView([-26.3044, -48.8487], 12);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(mapa);
+    mapa.on("click", function (e) {
+      var lat = e.latlng.lat, lng = e.latlng.lng;
+      if (lat < -26.65 || lat > -25.9 || lng < -49.45 || lng > -48.55) {
+        alert("Selecione um ponto na região aproximada de Joinville."); return;
+      }
+      posicao(lat, lng);
+    });
+  } else {
+    $("mapa").textContent = "Mapa indisponível no momento. Informe o endereço para registrar a ocorrência.";
+  }
+  $("remover-ponto").addEventListener("click", function () {
+    $("lat").value = $("lng").value = "";
+    if (mapa && marcador) { mapa.removeLayer(marcador); marcador = null; }
+  });
   $("anon").addEventListener("change", function () {
     $("contato").hidden = $("anon").checked;
     if ($("anon").checked) $("nome").value = "";
@@ -133,22 +169,30 @@
     if (link) { var a = document.createElement("a"); a.href = "#ocorrencias"; a.className = "btn small"; a.textContent = "Ver ocorrências registradas"; c.appendChild(a); }
     c.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
   }
-  $("form").addEventListener("submit", function (e) {
+  $("form").addEventListener("submit", async function (e) {
     e.preventDefault();
-    var d = { tipo: $("tipo").value, cidade: $("cidade").value.trim(), uf: $("uf").value, local: $("local").value.trim(),
+    var d = { tipo: $("tipo").value, cidade: "Joinville", uf: "SC", endereco: $("endereco").value.trim(), local: $("local").value.trim(),
+              lat: $("lat").value ? Number($("lat").value) : null, lng: $("lng").value ? Number($("lng").value) : null,
               data: $("data").value, desc: $("desc").value.trim(), anonima: $("anon").checked, contato: $("nome").value.trim() };
     var ruim = false;
     function chk(cond, campo, msg) { erro(campo, cond ? "" : msg); if (!cond) ruim = true; }
     chk(!!d.tipo, "tipo", "Escolha o tipo de ocorrência.");
-    chk(!!d.cidade, "cidade", "Informe o município.");
-    chk(!!d.uf, "uf", "Escolha o estado.");
-    chk(!!d.data, "data", "Informe a data.");
+    chk(d.cidade === "Joinville", "cidade", "Município inválido.");
+    chk(d.uf === "SC", "uf", "Estado inválido.");
+    chk(d.endereco.length >= 5, "endereco", "Informe um endereço com pelo menos 5 caracteres.");
+    chk(!!d.data && d.data <= hojeLocal(), "data", "Informe uma data válida, não futura.");
     chk(d.desc.length >= 10, "desc", "Descreva com pelo menos 10 caracteres.");
     if (ruim) return;
 
-    var reg = Banco.adicionar(d);
-    aviso("Denúncia registrada", "Seu protocolo é " + reg.protocolo + ". Guarde este código. Para fiscalização oficial, envie também ao Ibama (0800 061 8080).", false, true);
-    $("form").reset(); $("contato").hidden = true;
+    $("enviar").disabled = true;
+    try {
+      var reg = await Banco.adicionar(d);
+      aviso("Denúncia registrada", "Seu protocolo é " + reg.protocolo + ". Os dados foram gravados no JSON do servidor local. Para fiscalização oficial, envie também ao Ibama (0800 061 8080).", false, true);
+      $("form").reset(); $("contato").hidden = true;
+      $("remover-ponto").click();
+    } catch (e) {
+      aviso("Não foi possível registrar", e.message + " Verifique se o servidor Node está em execução.", true, false);
+    } finally { $("enviar").disabled = false; }
   });
 
   /* ---------- Listagem ---------- */
@@ -167,7 +211,10 @@
   function td(tr, txt) { var c = document.createElement("td"); c.textContent = txt; tr.appendChild(c); }
   function fmt(iso) { var p = iso.split("-"); return p[2] + "/" + p[1] + "/" + p[0]; }
 
-  function carregar() { dados = Banco.listar(); desenhar(); }
+  async function carregar() {
+    try { dados = await Banco.listar(); desenhar(); }
+    catch (e) { $("tabela").textContent = "Erro ao carregar registros: " + e.message; }
+  }
   function desenhar() {
     var f = $("filtro").value;
     var lista = f ? dados.filter(function (r) { return r.tipo === f; }) : dados;
@@ -197,23 +244,28 @@
     lista.forEach(function (r, i) {
       var tr = tb.insertRow(); tr.style.setProperty("--d", Math.min(i * 0.04, 0.6) + "s");
       td(tr, r.protocolo); td(tr, r.tipo);
-      td(tr, r.cidade + "/" + r.uf + (r.local ? " – " + r.local : ""));
+      td(tr, (r.endereco ? r.endereco + " – " : "") + (r.cidade || "") + "/" + (r.uf || "") + (r.local ? " – " + r.local : ""));
       td(tr, fmt(r.data)); td(tr, r.anonima ? "Anônima" : "Identificada");
       var c = document.createElement("td"), b = document.createElement("button");
       b.type = "button"; b.className = "btn small alt"; b.textContent = "Excluir";
       b.setAttribute("aria-label", "Excluir ocorrência " + r.protocolo);
-      b.addEventListener("click", function () { Banco.excluir(r.protocolo); carregar(); });
+      b.addEventListener("click", async function () {
+        if (!confirm("Excluir ocorrência " + r.protocolo + "?")) return;
+        try { await Banco.excluir(r.id || r.protocolo); await carregar(); }
+        catch (e) { alert("Erro ao excluir: " + e.message); }
+      });
       c.appendChild(b); tr.appendChild(c);
     });
     box.appendChild(t);
   }
   $("filtro").addEventListener("change", desenhar);
-  $("baixar").addEventListener("click", function () {
-    if (!Banco.listar().length) { alert("Ainda não há ocorrências para baixar."); return; }
-    Banco.baixarJSON();
+  $("baixar").addEventListener("click", async function () {
+    try { await Banco.baixarJSON(); } catch (e) { alert("Erro ao baixar: " + e.message); }
   });
-  $("limpar").addEventListener("click", function () {
-    if (Banco.listar().length && confirm("Apagar todas as ocorrências salvas neste navegador?")) { Banco.gravar([]); carregar(); }
+  $("limpar").addEventListener("click", async function () {
+    if (!confirm("Apagar TODAS as ocorrências do arquivo JSON no servidor? Esta ação é irreversível.")) return;
+    try { await Banco.limpar(); await carregar(); }
+    catch (e) { alert("Erro ao apagar: " + e.message); }
   });
 
   route();
