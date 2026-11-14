@@ -645,42 +645,4 @@ footer p {
 .logo {
     width: 150px;
 }
-/* Seleção de localização em Joinville */
-.mapa {
-  height: 310px;
-  width: 100%;
-  border: 1.5px solid var(--line);
-  border-radius: 10px;
-  margin: .6rem 0 1rem;
-  z-index: 0;
-  background: var(--soft);
-}
 input[readonly] { opacity: .9; cursor: default; }
-
-/* Mapa ilustrativo offline: não usa nenhum servidor de mapas */
-.mapa {
-  position: relative;
-  overflow: hidden;
-  cursor: crosshair;
-  min-height: 300px;
-  height: 310px;
-  border: 2px solid var(--line);
-  border-radius: 12px;
-  background:
-    linear-gradient(115deg, transparent 0 39%, rgba(115,168,190,.65) 40% 44%, transparent 45%),
-    radial-gradient(ellipse at 32% 30%, #b1cfa1 0 19%, transparent 20%),
-    radial-gradient(ellipse at 76% 72%, #a7c59b 0 25%, transparent 26%),
-    linear-gradient(140deg,#dce9d1,#c0d9b3);
-  color: #214b37;
-  user-select: none;
-  touch-action: manipulation;
-}
-.mapa:focus-visible { outline: 3px solid var(--ember); outline-offset: 3px; }
-.mapa-titulo { position: absolute; left: 14px; top: 12px; background: #f5faed; border-radius: 6px; padding: 4px 9px; font-weight: 800; }
-.mapa-area { position: absolute; padding: 3px 7px; background: rgba(255,255,255,.8); border-radius: 6px; font-size: .83rem; pointer-events: none; }
-.mapa-norte { left: 45%; top: 22%; } .mapa-centro { left: 43%; top: 51%; } .mapa-sul { left: 47%; top: 79%; } .mapa-leste { left: 76%; top: 44%; }
-.mapa-rua { position: absolute; width: 110%; height: 6px; left: -5%; top: 57%; background: #faf8e7; border: 1px solid #d7cda9; transform: rotate(-23deg); pointer-events: none; }
-.rua-b { top: 46%; transform: rotate(35deg); } .rua-c { top: 65%; transform: rotate(2deg); }
-.mapa-ponto { position: absolute; transform: translate(-50%,-50%); z-index: 2; border-radius: 50%; background: #c2410c; color: #fff; width: 26px; height: 26px; display: grid; place-items: center; pointer-events: none; box-shadow: 0 2px 5px #0005; }
-.mapa-ponto[hidden] { display: none; }
-.mapa-aviso { position: absolute; left: 0; right: 0; bottom: 0; text-align: center; padding: 5px; font-size: .72rem; background: #fffdf0e8; color: #344b38; pointer-events: none; }
