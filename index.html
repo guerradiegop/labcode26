@@ -4,9 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Floresta em Pé – Desmatamento: entenda, evite e denuncie</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Public+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoUqI6Fwz9rY=" crossorigin="">
 </head>
 <body>
 <header class="top" id="topo">
@@ -124,7 +122,7 @@
             </div>
             <div class="f"><label for="endereco">Endereço da ocorrência *</label><input type="text" id="endereco" name="endereco" maxlength="200" placeholder="Rua, número, bairro — Joinville/SC" required><p class="err" id="e-endereco"></p></div>
             <div class="f"><label for="local">Ponto de referência</label><input type="text" id="local" name="local" maxlength="120" placeholder="Estrada, fazenda, rio próximo..."></div>
-            <div class="f"><label for="lat">Localização no mapa de Joinville (opcional)</label><p class="note">Clique no mapa para marcar um ponto aproximado. O mapa não confirma se o endereço pertence ao município.</p><div id="mapa" class="mapa" aria-label="Mapa interativo da região de Joinville"></div><div class="row2"><div class="f"><label for="lat">Latitude</label><input id="lat" name="lat" type="text" readonly placeholder="Selecione no mapa"></div><div class="f"><label for="lng">Longitude</label><input id="lng" name="lng" type="text" readonly placeholder="Selecione no mapa"></div></div><button class="btn small alt" id="remover-ponto" type="button">Remover ponto</button></div>
+            <div class="f"><label for="lat">Localização no mapa de Joinville (opcional)</label><p class="note">Clique no desenho esquemático para marcar uma posição ilustrativa. As coordenadas são apenas estimativas e NÃO correspondem à localização real do endereço.</p><div id="mapa" class="mapa" aria-label="Mapa esquemático interativo de Joinville"></div><div class="row2"><div class="f"><label for="lat">Latitude</label><input id="lat" name="lat" type="text" readonly placeholder="Selecione no mapa"></div><div class="f"><label for="lng">Longitude</label><input id="lng" name="lng" type="text" readonly placeholder="Selecione no mapa"></div></div><button class="btn small alt" id="remover-ponto" type="button">Remover ponto</button></div>
             <div class="f"><label for="data">Data em que viu *</label><input type="date" id="data" name="data"><p class="err" id="e-data"></p></div>
             <div class="f"><label for="desc">O que você viu? *</label><textarea id="desc" name="desc" maxlength="1000" placeholder="Descreva: tamanho aproximado da área, máquinas, fogo, fumaça..."></textarea><p class="err" id="e-desc"></p></div>
             <div class="f"><label class="check"><input type="checkbox" id="anon" checked> Quero denunciar de forma anônima</label></div>
@@ -142,15 +140,16 @@
   <section>
     <div class="wrap">
       <h2>Registro de ocorrências</h2>
-      <p>As ocorrências são gravadas no arquivo <code>data/ocorrencias.json</code> no computador onde o servidor está executando. O botão permite baixar uma cópia. Registros antigos deste navegador são importados automaticamente quando possível.</p>
+      <p>As ocorrências são salvas neste navegador (localStorage), inclusive ao fechar a página. Para manter um arquivo <code>ocorrencias.json</code> na pasta do projeto, clique em <b>Salvar JSON</b> e escolha a pasta no Chrome. Em Chromebooks sem essa permissão, o arquivo será baixado. Importe um JSON anterior para recuperar dados de outros navegadores.</p>
       <div class="stats" id="stats"></div>
       <div class="tools">
         <label for="filtro">Filtrar por tipo</label>
         <select id="filtro"><option value="">Todos</option></select>
         <a class="btn small" href="#denuncia">Nova denúncia</a>
-        <button class="btn small alt" type="button" id="baixar">Baixar JSON</button>
+        <button class="btn small alt" type="button" id="salvar-json">Salvar JSON</button>
+        <button class="btn small alt" type="button" id="baixar">Baixar cópia JSON</button>
         <label class="btn small alt import-btn" for="importar">Importar JSON antigo</label><input type="file" id="importar" accept=".json,application/json" aria-label="Importar arquivo JSON de ocorrências" hidden>
-        <button class="btn small alt" type="button" id="limpar">Apagar todas</button>
+        <button class="btn small alt" type="button" id="limpar">Apagar dados locais</button>
       </div>
       <div class="tablewrap" id="tabela"></div>
     </div>
@@ -165,7 +164,6 @@
   </div>
 </footer>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="script.js"></script>
 </body>
 </html>
